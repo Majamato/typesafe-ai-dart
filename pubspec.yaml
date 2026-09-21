@@ -1,0 +1,36 @@
+name: typesafe_ai_dart
+description: >-
+  Unofficial Dart SDK for the TypeSafe AI System One API (Jev). Typed
+  questions and answers, retries, timeouts and typed events, built for servers.
+version: 0.1.0
+repository: https://github.com/Majamato/typesafe-ai-dart
+topics:
+  - ai
+  - typesafe
+  - jev-ai
+  - sdk
+  - http
+
+platforms:
+  linux:
+  macos:
+  windows:
+
+environment:
+  sdk: ^3.10.0
+
+# Test-only TLS keys for the loopback HTTP/2 server; never used outside tests.
+false_secrets:
+  - /test/io/support/certs/*.key
+
+dependencies:
+  collection: ^1.19.1
+  http: ^1.6.0
+  http2: ^3.1.0
+  meta: ^1.16.0
+
+dev_dependencies:
+  coverage: ^1.15.1
+  fake_async: ^1.3.3
+  test: ^1.25.0
+  very_good_analysis: ^10.0.0

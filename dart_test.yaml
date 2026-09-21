@@ -1,0 +1,46 @@
+# `dart test` runs everything except the tags skipped below.
+#   dart test -P io         real HTTP/1.1 and HTTP/2 loopback servers only
+#   dart test -P stress     load, cancel storms, leak checks
+#   dart test -P mutation   mutation smoke (slow)
+#   dart test -t live       real API; needs TYPESAFE_API_KEY
+platforms: [vm]
+timeout: 30s
+
+tags:
+  live:
+    timeout: 2m
+  io:
+    timeout: 60s
+  h1:
+    add_tags: [io]
+  h2:
+    add_tags: [io]
+  timing:
+    retry: 2
+  property:
+    timeout: 2m
+  subprocess:
+    timeout: 5m
+  stress:
+    timeout: 10m
+    skip: "Run with -P stress"
+  mutation:
+    timeout: 60m
+    skip: "Run with -P mutation"
+
+presets:
+  io:
+    include_tags: io
+    concurrency: 1
+  stress:
+    include_tags: stress
+    concurrency: 1
+    tags:
+      stress:
+        skip: false
+  mutation:
+    include_tags: mutation
+    concurrency: 1
+    tags:
+      mutation:
+        skip: false
