@@ -22,9 +22,12 @@ late final Object text;
 late final Question<Answer> q;
 ''';
 
-/// The README's Dart blocks, in order.
+/// The README's Dart blocks, in order. Git on Windows may check README.md
+/// out with CRLF line endings, so they are normalised first.
 List<String> _readmeSnippets() {
-  final readme = File('$packageRoot/README.md').readAsStringSync();
+  final readme = File(
+    '$packageRoot/README.md',
+  ).readAsStringSync().replaceAll('\r\n', '\n');
   return RegExp(
     r'```dart\n(.*?)```',
     dotAll: true,
