@@ -1,21 +1,26 @@
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:test/test.dart';
 import 'package:typesafe_ai_dart/src/http/deadline_scheduler.dart';
 
 void main() {
   const ms = Duration(milliseconds: 1);
 
-  test('runs callbacks in deadline order, then goes idle', () async {
-    final scheduler = DeadlineScheduler();
-    final fired = <int>[];
-    for (final n in [30, 10, 20]) {
-      scheduler.schedule(ms * n, () => fired.add(n));
-    }
-    expect(scheduler.isIdle, isFalse);
-    await Future<void>.delayed(ms * 60);
-    expect(fired, [10, 20, 30]);
-    expect(scheduler.isIdle, isTrue);
+  test('runs callbacks in deadline order, then goes idle', () {
+    // Fake time: on a real clock a stall between the schedule calls moves
+    // their deadlines apart and legitimately reorders them.
+    fakeAsync((async) {
+      final scheduler = DeadlineScheduler(clock: () => async.elapsed);
+      final fired = <int>[];
+      for (final n in [30, 10, 20]) {
+        scheduler.schedule(ms * n, () => fired.add(n));
+      }
+      expect(scheduler.isIdle, isFalse);
+      async.elapse(ms * 60);
+      expect(fired, [10, 20, 30]);
+      expect(scheduler.isIdle, isTrue);
+    });
   });
 
   test('a cancelled callback never runs', () async {

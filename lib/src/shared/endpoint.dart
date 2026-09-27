@@ -2,8 +2,7 @@
 /// them here keeps a method from being sent to the wrong path.
 enum Endpoint {
   systemOne('POST', '/v1/systemone'),
-  listModels('GET', '/v1/models')
-  ;
+  listModels('GET', '/v1/models');
 
   const Endpoint(this.method, this.path);
 

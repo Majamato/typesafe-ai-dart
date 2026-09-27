@@ -35,8 +35,12 @@ void main() {
     client.close();
   });
 
-  Future<SystemOneResponse> call(String state) =>
-      client.systemOne(state: state, questions: [_question]);
+  Future<SystemOneResponse> call(String state, {Duration? timeout}) =>
+      client.systemOne(
+        state: state,
+        questions: [_question],
+        options: RequestOptions(timeout: timeout),
+      );
 
   final timesOut = throwsA(isA<TypeSafeTimeoutException>());
 
@@ -55,7 +59,10 @@ void main() {
     server
       ..stallHandshakes = false
       ..releaseStalled();
-    expect((await call('second')).model, 'second');
+    // Recovery, not timing, is under test: on a loaded machine the handshake
+    // can take longer than _timeout.
+    final second = await call('second', timeout: const Duration(seconds: 5));
+    expect(second.model, 'second');
   });
 
   // Known issues N3 and S10 live in package:http2's Http2Client, which the

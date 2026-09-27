@@ -31,7 +31,13 @@ void main() {
       retryPolicy: RetryPolicy.none,
     );
     // Dial and warm the connection so timings below exclude the handshake.
-    await client.systemOne(state: 'warm-up', questions: [_question]);
+    // The handshake gets its own budget: on a loaded machine it can take
+    // longer than _timeout.
+    await client.systemOne(
+      state: 'warm-up',
+      questions: [_question],
+      options: const RequestOptions(timeout: Duration(seconds: 5)),
+    );
   });
 
   tearDown(() async {

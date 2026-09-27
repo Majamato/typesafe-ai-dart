@@ -8,8 +8,7 @@ enum JsonValueKind {
   decimal('double'),
   number('number'),
   array('array'),
-  object('object')
-  ;
+  object('object');
 
   const JsonValueKind(this.label);
 
