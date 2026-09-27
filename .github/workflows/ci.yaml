@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Formatting, very_good_analysis lints and pub.dev validation.
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - run: dart pub get
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: dart analyze --fatal-infos
+      - run: dart pub publish --dry-run
+
+  # `dart test` skips the stress, mutation and live tags (see dart_test.yaml).
+  test:
+    name: test (${{ matrix.os }}, ${{ matrix.sdk }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        sdk: [stable]
+        include:
+          # Lowest SDK pubspec.yaml allows.
+          - os: ubuntu-latest
+            sdk: 3.10.0
+            min-sdk: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ matrix.sdk }}
+      # Analyzes against the lowest versions of the direct dependencies.
+      # Tests can't run on this resolution: `pub downgrade` also picks
+      # ancient transitive packages (watcher 1.0.0, pub_semver 2.0.0) that
+      # no longer compile, so they run after the upgrade below.
+      - if: matrix.min-sdk
+        run: dart pub downgrade && dart analyze
+      - run: dart pub upgrade
+      - run: dart test
