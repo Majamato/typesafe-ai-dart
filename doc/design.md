@@ -225,6 +225,51 @@ through `onEvent` and lets you route them.
   exactly one `CallFinished`, with its latency, attempts, status, request id
   and token usage.
 
+## Experimental features
+
+Jev 1.14's images and Box questions are labelled not production-ready by
+TypeSafe, so the package keeps them apart from everything else.
+
+**Released apart.** They ship in `0.2.0-dev` prereleases. Pub never
+resolves `^0.1.0` to a prerelease of 0.2.0, so nobody gets them without
+asking. A Box adds a case to the sealed `Answer` and `Question` and to
+`JudgementType`, which breaks an exhaustive `switch`, and in 0.x the
+minor version is the breaking one.
+
+**Imported apart.** `Image`, `Box` and the rest are exported only from
+`experimental.dart` and marked `@experimental`, so they can follow
+TypeSafe's changes without a major release. `Box` and `BoxAnswer` still
+live in the same libraries as the other questions and answers, because a
+sealed class only allows subclasses in its own library.
+
+**Free when unused.** A call without images sends the same bytes and
+headers as 0.1.0, through the same code:
+
+- Images are found during the encoding that already happens. `Image.toJson`
+  records itself while a request or question is being encoded. Encoding is
+  synchronous, so a plain flag and list scoped to that encode are enough.
+  A call without images pays for a few field writes, and the list is only
+  allocated once an image turns up. A question records its images once,
+  when built, like its bytes.
+- The client keeps its prebuilt header maps. It builds a merged map only for
+  a multipart content type, as it already does for per-call headers.
+
+**One buffer for multipart.** The multipart framing is built once per
+request around the JSON body, and the whole body is one `Uint8List`, so a
+retry resends the same bytes as any other request does. Streaming the files
+would save one copy of the images, but it would need a body that can be
+replayed for retries, and the API caps a request at 32 MiB anyway.
+
+**The API owns the limits.** The client checks only that an image is PNG
+or JPEG, which it needs for the part's content type. Size and pixel limits
+are TypeSafe's to change, so checking them here would turn a relaxed limit
+into a client-side error.
+
+**Opt-in is explicit, and checked early.** TypeSafe's SDKs have you send
+the `TypeSafe-Danger-Zone-Images` header yourself. Here it is
+`DangerZone.images`, or the header by hand, and a request with images but
+neither fails before it is sent instead of returning a 400.
+
 ## How it's tested
 
 The suite is built to find what normal tests miss. Besides unit tests it

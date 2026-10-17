@@ -13,6 +13,8 @@ const _retryAfter = 'lib/src/http/http_retry_after.dart';
 const _mapper = 'lib/src/http/http_error_mapper.dart';
 const _client = 'lib/src/client/typesafe_client.dart';
 const _token = 'lib/src/client/cancel_token.dart';
+const _request = 'lib/src/request/system_one_request.dart';
+const _image = 'lib/src/assets/image.dart';
 
 /// Hand-picked mutants of the logic most likely to break quietly.
 final List<Mutant> mutants = [
@@ -355,5 +357,114 @@ final List<Mutant> mutants = [
     'value is num && value.isFinite ? value.toInt() : 0',
     'value is num ? value.toInt() : 0',
     'a non-finite count reads 0 (D1)',
+  ),
+
+  // Experimental images and Danger Zone headers.
+  _m(
+    'images-guard-off',
+    _client,
+    'if (requestNeedsImages(request) && !_imagesOn(options)) {',
+    'if (false) {',
+    'an image or Box without DangerZone.images fails before sending',
+  ),
+  _m(
+    'images-box-needs-nothing',
+    _request,
+    'needsImages: found != null || hasImageQuestion,',
+    'needsImages: found != null,',
+    'a Box with no image still needs DangerZone.images',
+  ),
+  _m(
+    'images-question-ignored',
+    _request,
+    'if (question is Box || questionImages(question) != null) {',
+    'if (question is Box) {',
+    "an image only in a question's instructions or criteria is sent",
+  ),
+  _m(
+    'images-shared-reference',
+    _request,
+    'if (!identical(known, image)) {',
+    'if (false) {',
+    'two different images under one reference are rejected',
+  ),
+  _m(
+    'images-assets-extra',
+    _request,
+    "if (extra.containsKey('assets')) {",
+    'if (false) {',
+    "an 'assets' extra beside Image values is rejected",
+  ),
+  _m(
+    'images-in-extra',
+    _request,
+    'if (images != null) {',
+    'if (false) {',
+    'an Image in extra, which the API never reads, is rejected',
+  ),
+  _m(
+    'images-recording-leaks',
+    _image,
+    '    _collecting = false;\n    _found = null;\n  } else {',
+    '    _found = null;\n  } else {',
+    'an encode closes its image recording',
+  ),
+  _m(
+    'images-no-finally',
+    _request,
+    '    } finally {\n      found = stopCollectingImages(outer);\n    }',
+    '      found = stopCollectingImages(outer);\n    } finally {}',
+    'a state encode that throws closes its image recording',
+  ),
+  _m(
+    'images-nested-lost',
+    _image,
+    '      outer.addAll(found);',
+    '',
+    "a nested encode's images count toward the enclosing one",
+  ),
+  _m(
+    'images-json-content-type',
+    _client,
+    'if (attempt == 0 && callerHeaders == null && contentType == null) {',
+    'if (attempt == 0 && callerHeaders == null) {',
+    'a multipart body is never sent as application/json',
+  ),
+  _m(
+    'images-part-content-type',
+    _request,
+    r"'Content-Type: ${images[i].format.mimeType}\r\n\r\n',",
+    r"'Content-Type: application/octet-stream\r\n\r\n',",
+    "each image part carries its format's content type",
+  ),
+  _m(
+    'zone-raw-header-any',
+    _client,
+    "header.value.toLowerCase() == 'true',",
+    'true,',
+    "a raw images header of 'false' doesn't turn images on",
+  ),
+  _m(
+    'zone-default-raw-any',
+    _client,
+    "_defaultHeaders[dangerZoneImagesHeader]?.toLowerCase() == 'true' ||",
+    '_defaultHeaders[dangerZoneImagesHeader] != null ||',
+    "a default images header of 'false' doesn't turn images on",
+  ),
+  _m(
+    'zone-drops-call-headers',
+    _client,
+    'callerHeaders = _withZones(callerHeaders ?? const {}, '
+        'options.dangerZone);',
+    'callerHeaders = _withZones(const {}, options.dangerZone);',
+    "a call's zones keep its own headers",
+  ),
+  _m(
+    'zone-empty-adds-header',
+    _client,
+    '  ) => zones.isEmpty\n      ? headers\n',
+    '  ) => zones.isEmpty\n'
+        "      ? {...headers, dangerZoneImagesHeader: 'true'}\n",
+    'no zone, no Danger Zone header',
   ),
 ];

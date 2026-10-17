@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -67,7 +68,7 @@ final class ScriptedClient {
   /// Every request received, in order.
   final List<http.Request> requests = [];
 
-  /// Bodies of every request received, in order.
+  /// Bodies of every request received, in order, decoded as UTF-8.
   final List<String> bodies = [];
 
   /// The underlying mock client to pass to `TypeSafeClient`.
@@ -75,7 +76,8 @@ final class ScriptedClient {
 
   Future<http.Response> _handle(http.Request request) async {
     requests.add(request);
-    bodies.add(request.body);
+    // Tolerant, so a multipart body with image bytes doesn't throw here.
+    bodies.add(utf8.decode(request.bodyBytes, allowMalformed: true));
     final step = steps[(requests.length - 1).clamp(0, steps.length - 1)];
     if (step.delay > Duration.zero) {
       await Future<void>.delayed(step.delay);

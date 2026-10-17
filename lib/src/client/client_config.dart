@@ -1,4 +1,5 @@
 import 'package:meta/meta.dart';
+import 'package:typesafe_ai_dart/src/client/danger_zone.dart';
 import 'package:typesafe_ai_dart/src/client/retry_policy.dart';
 import 'package:typesafe_ai_dart/src/env/env.dart';
 import 'package:typesafe_ai_dart/src/http/http_headers.dart';
@@ -16,7 +17,9 @@ final class ClientConfig {
     this.totalTimeout,
     this.retryPolicy = const RetryPolicy(),
     this.http2 = false,
-  }) : defaultHeaders = Map.unmodifiable(defaultHeaders) {
+    Set<DangerZone> dangerZone = const {},
+  }) : defaultHeaders = Map.unmodifiable(defaultHeaders),
+       dangerZone = Set.unmodifiable(dangerZone) {
     if (apiKey.isEmpty) {
       throw ArgumentError.value(apiKey, 'apiKey', 'must not be empty');
     }
@@ -77,6 +80,7 @@ final class ClientConfig {
     Duration? totalTimeout,
     RetryPolicy retryPolicy = const RetryPolicy(),
     bool http2 = false,
+    Set<DangerZone> dangerZone = const {},
   }) {
     final key = _nonEmpty(apiKey) ?? readEnv(apiKeyVariable) ?? _defineApiKey;
     if (key == null) {
@@ -111,6 +115,7 @@ final class ClientConfig {
       totalTimeout: totalTimeout,
       retryPolicy: retryPolicy,
       http2: http2,
+      dangerZone: dangerZone,
     );
   }
 
@@ -165,13 +170,22 @@ final class ClientConfig {
   /// enabling.
   final bool http2;
 
+  /// Experimental features turned on for every call; each adds its
+  /// `TypeSafe-Danger-Zone-*` header. Unmodifiable. See `DangerZone`.
+  @experimental
+  final Set<DangerZone> dangerZone;
+
   /// Lists the base URL, model, timing and transport settings, deliberately
   /// leaving out [apiKey] and [defaultHeaders] so a config can be logged.
+  /// [dangerZone] is listed only when it's not empty.
   @override
   String toString() =>
       'ClientConfig(baseUrl: $baseUrl, defaultModel: $defaultModel, '
       'timeout: $timeout, totalTimeout: $totalTimeout, '
-      'retryPolicy: $retryPolicy, http2: $http2)';
+      'retryPolicy: $retryPolicy, http2: $http2'
+      '${dangerZone.isEmpty ? '' : ', dangerZone: ${_zoneNames()}'})';
+
+  String _zoneNames() => [for (final zone in dangerZone) zone.name].join(', ');
 
   // An empty define reads as unset, as an empty env var does.
   static const String? _defineApiKey =

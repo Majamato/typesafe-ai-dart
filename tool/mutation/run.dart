@@ -18,6 +18,7 @@ enum Verdict { killed, survived, timedOut, invalid }
 const _copied = [
   'lib',
   'test',
+  'CHANGELOG.md',
   'pubspec.yaml',
   'pubspec.lock',
   'analysis_options.yaml',
@@ -32,6 +33,15 @@ const _testArgs = ['test', '-x', 'live', '-x', 'subprocess', '-x', 'mutation'];
 
 const _perMutant = Duration(minutes: 3);
 
+/// A "mutant" that changes nothing, run first to check the copy passes.
+const Mutant _unchanged = (
+  id: 'unchanged',
+  file: 'pubspec.yaml',
+  from: 'name: typesafe_ai_dart',
+  to: 'name: typesafe_ai_dart',
+  why: 'the unmutated suite passes',
+);
+
 Future<void> main(List<String> args) async {
   final jobs = _option(args, '--jobs', '3');
   final only = _option(args, '--only', '');
@@ -42,6 +52,13 @@ Future<void> main(List<String> args) async {
             if (only.split(',').contains(m.id)) m,
         ];
   final root = Directory.current.path;
+  // A copy that fails unmutated would make every mutant look killed.
+  final (baseline, detail) = await _judge(root, _unchanged);
+  if (baseline != Verdict.survived) {
+    print('the suite does not pass on an unmutated copy: ${baseline.name}');
+    print('$detail\nCheck that _copied holds every file the tests read.');
+    exit(1);
+  }
   final verdicts = <String, (Verdict, String)>{};
   final queue = [...selected];
 

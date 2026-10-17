@@ -5,6 +5,7 @@ import 'package:meta/meta.dart';
 import 'package:typesafe_ai_dart/src/answers/answer.dart';
 import 'package:typesafe_ai_dart/src/client/cancel_token.dart';
 import 'package:typesafe_ai_dart/src/client/client_config.dart';
+import 'package:typesafe_ai_dart/src/client/danger_zone.dart';
 import 'package:typesafe_ai_dart/src/client/request_options.dart';
 import 'package:typesafe_ai_dart/src/client/retry_policy.dart';
 import 'package:typesafe_ai_dart/src/events/call_trace.dart';
@@ -43,6 +44,7 @@ final class TypeSafeClient {
     bool http2 = false,
     http.Client? httpClient,
     void Function(TypeSafeEvent event)? onEvent,
+    Set<DangerZone> dangerZone = const {},
   }) : this.withConfig(
          ClientConfig.resolve(
            apiKey: apiKey,
@@ -53,6 +55,7 @@ final class TypeSafeClient {
            totalTimeout: totalTimeout,
            retryPolicy: retryPolicy,
            http2: http2,
+           dangerZone: dangerZone,
          ),
          httpClient: httpClient,
          onEvent: onEvent,
@@ -96,9 +99,9 @@ final class TypeSafeClient {
              )
            : (client: httpClient, close: null),
        _runner = RetryRunner(clock: clock),
-       _defaultHeaders = _callerHeaders(
-         config.defaultHeaders,
-         argument: 'defaultHeaders',
+       _defaultHeaders = _withZones(
+         _callerHeaders(config.defaultHeaders, argument: 'defaultHeaders'),
+         config.dangerZone,
        ),
        _defaultModelJson = jsonUtf8Encoder.convert(config.defaultModel),
        _sdkGetHeaders = _sdkHeaders(config, hasBody: false),
@@ -134,7 +137,8 @@ final class TypeSafeClient {
   /// that names no model.
   final List<int> _defaultModelJson;
 
-  /// [ClientConfig.defaultHeaders] keyed lower-case, minus the SDK's own.
+  /// [ClientConfig.defaultHeaders] keyed lower-case, minus the SDK's own,
+  /// plus the header of each [ClientConfig.dangerZone] feature.
   final Map<String, String> _defaultHeaders;
 
   /// The headers the SDK sets itself, which win over any caller's.
@@ -186,11 +190,19 @@ final class TypeSafeClient {
     SystemOneRequest request, {
     RequestOptions? options,
   }) async {
+    if (requestNeedsImages(request) && !_imagesOn(options)) {
+      throw ArgumentError(
+        'has an Image or a Box question, which the API reads only with '
+            'DangerZone.images turned on, in the client or in options',
+        'request',
+      );
+    }
     final trace = _trace(Endpoint.systemOne);
     try {
       final response = await _call(
         endpoint: Endpoint.systemOne,
         body: request.encode(defaultModelJson: _defaultModelJson),
+        contentType: multipartContentType(request),
         options: options,
         trace: trace,
       );
@@ -231,12 +243,14 @@ final class TypeSafeClient {
     return send(request, options: options);
   }
 
-  /// The body is encoded once and resent as-is on every retry.
+  /// The body is encoded once and resent as-is on every retry. [contentType]
+  /// replaces the JSON one, for a multipart body.
   Future<RawResponse> _call({
     required Endpoint endpoint,
     required RequestOptions? options,
     required CallTrace? trace,
     Uint8List? body,
+    String? contentType,
   }) {
     final timeout = options?.timeout ?? config.timeout;
     final totalTimeout = options?.totalTimeout ?? config.totalTimeout;
@@ -251,9 +265,12 @@ final class TypeSafeClient {
       );
     }
     final extra = options?.headers;
-    final callerHeaders = extra == null || extra.isEmpty
+    var callerHeaders = extra == null || extra.isEmpty
         ? null
         : _callerHeaders(extra, argument: 'headers');
+    if (options != null && options.dangerZone.isNotEmpty) {
+      callerHeaders = _withZones(callerHeaders ?? const {}, options.dangerZone);
+    }
     final cancelToken = options?.cancelToken;
     return _runner.run(
       policy: options?.retryPolicy ?? config.retryPolicy,
@@ -269,6 +286,7 @@ final class TypeSafeClient {
           callerHeaders,
           attempt: attempt,
           hasBody: body != null,
+          contentType: contentType,
         ),
         body: body,
         timeout: attemptTimeout,
@@ -321,22 +339,49 @@ final class TypeSafeClient {
   }
 
   /// The prebuilt map on the common path; a merged copy only when the call
-  /// adds [callerHeaders] or is a retry.
+  /// adds [callerHeaders], sends a non-JSON [contentType], or is a retry.
   Map<String, String> _headers(
     Map<String, String>? callerHeaders, {
     required int attempt,
     required bool hasBody,
+    String? contentType,
   }) {
-    if (attempt == 0 && callerHeaders == null) {
+    if (attempt == 0 && callerHeaders == null && contentType == null) {
       return hasBody ? _postHeaders : _getHeaders;
     }
     return {
       ..._defaultHeaders,
       ...?callerHeaders,
       ...hasBody ? _sdkPostHeaders : _sdkGetHeaders,
+      contentTypeHeader: ?contentType,
       if (attempt > 0) retryCountHeader: '$attempt',
     };
   }
+
+  /// Whether a call with [options] turns images on: through a
+  /// [DangerZone], or by sending the header by hand, as TypeSafe's own
+  /// SDKs have their users do.
+  bool _imagesOn(RequestOptions? options) {
+    if (_defaultHeaders[dangerZoneImagesHeader]?.toLowerCase() == 'true' ||
+        (options != null && options.dangerZone.contains(DangerZone.images))) {
+      return true;
+    }
+    return options != null &&
+        options.headers.entries.any(
+          (header) =>
+              header.key.toLowerCase() == dangerZoneImagesHeader &&
+              header.value.toLowerCase() == 'true',
+        );
+  }
+
+  /// [headers] plus the header of each feature in [zones]; [headers] itself
+  /// when [zones] is empty.
+  static Map<String, String> _withZones(
+    Map<String, String> headers,
+    Set<DangerZone> zones,
+  ) => zones.isEmpty
+      ? headers
+      : {...headers, for (final zone in zones) zone.header: 'true'};
 
   /// [headers] validated and keyed lower-case, minus [_droppedHeaders], so no
   /// spelling of a name outranks the SDK's. [argument] names them in errors.
@@ -381,12 +426,11 @@ final class TypeSafeClient {
     required bool hasBody,
   }) => Map.unmodifiable({
     authorizationHeader: 'Bearer ${config.apiKey}',
-    acceptHeader: _jsonContentType,
+    acceptHeader: jsonContentType,
     userAgentHeader: _sdkIdentifier,
     sdkHeader: _sdkIdentifier,
-    if (hasBody) contentTypeHeader: _jsonContentType,
+    if (hasBody) contentTypeHeader: jsonContentType,
   });
 
-  static const _jsonContentType = 'application/json';
   static const _sdkIdentifier = 'typesafe_ai_dart/$packageVersion';
 }

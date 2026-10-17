@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:meta/meta.dart';
 import 'package:typesafe_ai_dart/src/answers/answer.dart';
+import 'package:typesafe_ai_dart/src/assets/image.dart';
 import 'package:typesafe_ai_dart/src/exceptions/exceptions.dart';
 import 'package:typesafe_ai_dart/src/json/json_codec.dart';
 import 'package:typesafe_ai_dart/src/json/json_encodable.dart';
@@ -24,11 +25,18 @@ sealed class Question<A extends Answer> {
       throw ArgumentError.value(id, 'id', 'must not be empty');
     }
     // Subclass fields are set by now: initializer lists all run first.
+    final outer = startCollectingImages();
+    final Uint8List json;
+    try {
+      json = encodeJsonArgument(toJson(), name: 'question "$id"');
+    } finally {
+      _images = stopCollectingImages(outer);
+    }
     _entry =
         (BytesBuilder(copy: false)
               ..add(jsonUtf8Encoder.convert(id))
               ..addByte(0x3A) // :
-              ..add(encodeJsonArgument(toJson(), name: 'question "$id"')))
+              ..add(json))
             .takeBytes();
   }
 
@@ -54,6 +62,10 @@ sealed class Question<A extends Answer> {
 
   /// `"<id>":{...}` as UTF-8 JSON, encoded when the question is built.
   late final Uint8List _entry;
+
+  /// The images in [instructions] and criteria, in the order they encoded,
+  /// or `null` for none. Found while [_entry] was encoded.
+  late final List<Image>? _images;
 
   /// Reads [raw] as this question's own answer type.
   A _adopt(Answer raw) {
@@ -82,6 +94,10 @@ A adoptAnswer<A extends Answer>(Question<A> question, Answer raw) =>
 /// The cached `"<id>":{...}` bytes of [question], which a request splices
 /// into its body. Not exported from the package.
 Uint8List encodedQuestionEntry(Question<Answer> question) => question._entry;
+
+/// The images [question] carries, or `null` for none. Not exported from the
+/// package.
+List<Image>? questionImages(Question<Answer> question) => question._images;
 
 /// Validates a choice's [options] in place and returns it.
 Map<String, Object?> _checkChoiceOptions(
@@ -339,4 +355,22 @@ final class ScoreLevel implements JsonEncodable {
     'summary': summary,
     if (signals.isNotEmpty) 'signals': signals,
   };
+}
+
+/// A question that finds one thing in an image, answered with the four edges
+/// of a box around it. Takes no criteria: [instructions] name what to find
+/// and in which image, such as "the coffee mug in `photo`".
+///
+/// Experimental: needs Jev 1.14 (`jev-preview` or `jev-1.14.0`), an [Image]
+/// in the request, and `DangerZone.images`. A Box always answers with a box,
+/// even when the target is absent, so ask a [Noul] alongside it.
+@experimental
+final class Box extends Question<BoxAnswer> {
+  Box({required super.id, required super.instructions});
+
+  @override
+  JudgementType get type => JudgementType.box;
+
+  @override
+  Map<String, Object?> get _fields => const {};
 }

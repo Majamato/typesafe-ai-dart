@@ -137,6 +137,73 @@ try {
 A bad argument is an `ArgumentError`, which is a bug to fix, not a failure
 to retry.
 
+## Experimental: images and Box (Jev 1.14)
+
+TypeSafe's Jev 1.14 adds "Danger Zone" features that it doesn't yet call
+ready for production: images in a request, `Box` questions that find
+something in an image, and long context. Their request format, answers and
+limits can change between releases.
+
+They ship only in prereleases of this package, so `^0.1.0` never picks them
+up. To try them:
+
+```sh
+dart pub add 'typesafe_ai_dart:^0.2.0-dev.1'
+```
+
+Then import `experimental.dart` next to the main library:
+
+```dart
+import 'package:typesafe_ai_dart/experimental.dart';
+import 'package:typesafe_ai_dart/typesafe_ai_dart.dart';
+
+final mugVisible = Noul(
+  id: 'mugVisible',
+  instructions: 'Is there a coffee mug in `photo`?',
+);
+final mug = Box(id: 'mug', instructions: 'the coffee mug in `photo`');
+
+Future<void> main() async {
+  final client = TypeSafeClient(dangerZone: {DangerZone.images});
+  final photo = await Image.fromFile('kitchen.jpg');
+
+  final response = await client.systemOne(
+    state: {'photo': photo},
+    questions: [mugVisible, mug],
+    model: 'jev-preview', // Box needs Jev 1.14
+  );
+  // A Box always answers, even when nothing is there: check the Noul first.
+  if (response.answer(mugVisible).noul > 0.5) {
+    final box = response.answer(mug);
+    print('mug: left ${box.left}, top ${box.top}, width ${box.width}');
+  }
+  client.close();
+}
+```
+
+- Put an `Image` anywhere a request takes text: in `state`, in
+  `instructions`, or in criteria. Use `TextWithImages` to put one inside a
+  sentence. A request with images goes out as `multipart/form-data`, with
+  each image sent once.
+- A request with an image or a `Box` needs `DangerZone.images`, on the
+  client or in `RequestOptions(dangerZone: ...)`. Without it, the call fails
+  with an `ArgumentError` before anything is sent.
+- `DangerZone.longContext` raises the context limit to 262k tokens. It is
+  slower and less accurate, so turn it on only per call.
+- Everything in `experimental.dart` is marked `@experimental`. Dart 3.11
+  and later warn on each use (`experimental_member_use`). To turn the warning
+  off, add this to your `analysis_options.yaml`:
+
+  ```yaml
+  analyzer:
+    errors:
+      experimental_member_use: ignore
+  ```
+
+Calls without these features behave exactly as in 0.1.0. The
+[guide](doc/guide.md#experimental-images-box-and-long-context) has the
+details.
+
 ## Learn more
 
 - [Guide](doc/guide.md) covers configuration, per-call options, retries and

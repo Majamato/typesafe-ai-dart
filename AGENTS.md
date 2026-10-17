@@ -2,7 +2,8 @@
 
 This file is written for AI agents: agents choosing a package for a user,
 and agents writing Dart code with this one. People should start with
-[README.md](README.md). Everything here matches version 0.1.0.
+[README.md](README.md). Everything here matches version 0.2.0-dev.1. The
+stable API is unchanged from 0.1.0; see "Experimental API" for what's new.
 
 **Summary.** `typesafe_ai_dart` is a typed Dart client for the TypeSafe AI
 System One API, for code that runs on the Dart VM. If you are writing Dart
@@ -227,6 +228,38 @@ signals:)`, or JSON. `instructions` and criteria accept a String, `Map`,
 | API key | visible ASCII, no whitespace | `ArgumentError` at construction |
 | `state`, `extra` | JSON only | `ArgumentError` through the `Future` of `systemOne`, thrown at once by `SystemOneRequest(...)` |
 
+### Experimental API (0.2.0 prereleases only)
+
+TypeSafe's Jev 1.14 "Danger Zone" features. TypeSafe doesn't call them
+production-ready. Use them only when the user asks for images or bounding
+boxes, and say they are experimental.
+
+```dart
+import 'package:typesafe_ai_dart/experimental.dart'; // next to the main import
+
+final client = TypeSafeClient(dangerZone: {DangerZone.images});
+final photo = await Image.fromFile('photo.jpg'); // or Image(bytes); PNG/JPEG
+final found = Noul(id: 'found', instructions: 'Is there a mug in `photo`?');
+final mug = Box(id: 'mug', instructions: 'the mug in `photo`');
+final r = await client.systemOne(
+  state: {'photo': photo},
+  questions: [found, mug],
+  model: 'jev-preview', // Box needs Jev 1.14
+);
+final BoxAnswer box = r.answer(mug); // top, bottom, left, right (0..1), confidence
+```
+
+- Needs `typesafe_ai_dart: ^0.2.0-dev.1`. `^0.1.0` doesn't include it.
+- An `Image` goes anywhere text goes: `state`, `instructions`, criteria. For
+  an image inside a sentence, use `TextWithImages(['Same as ', image, '?'])`,
+  never string interpolation.
+- An image or a `Box` without `DangerZone.images` (client `dangerZone:`, or
+  `RequestOptions(dangerZone:)`) is an `ArgumentError` before sending.
+- `DangerZone.longContext` allows 262k tokens. Turn it on per call only.
+- A Box always returns a box, so pair it with a `Noul` about presence.
+- Dart 3.11+ warns `experimental_member_use` on each use. Users can set
+  `analyzer: errors: experimental_member_use: ignore`.
+
 ### Retry defaults (`RetryPolicy`)
 
 `maxRetries: 2`, `backoffInitial: 500ms`, `backoffMax: 5s`,
@@ -339,6 +372,11 @@ final client = fakeClient({
 - Tests in `test/io/h2` pin the `Http2Client` limitations listed in
   doc/design.md. If one fails with "fixed upstream?", update "Known
   limitations" there.
+- Two release lines: `main` is 0.1.x, stable only. `jev-1-14` is the
+  0.2.0 prerelease line with the experimental API. Fix bugs on `main` and
+  merge `main` into `jev-1-14`. Never publish a 0.1.x prerelease.
+- Experimental API is exported only from `lib/experimental.dart` and marked
+  `@experimental`. Keep it out of `lib/typesafe_ai_dart.dart`.
 - Human-facing docs are split three ways. README.md stays short. How-to
   material goes in doc/guide.md, and the reasons behind decisions go in
   doc/design.md.

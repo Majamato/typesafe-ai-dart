@@ -10,7 +10,8 @@ import 'package:typesafe_ai_dart/src/http/http_retry_after.dart';
 import 'package:typesafe_ai_dart/src/shared/endpoint.dart';
 
 /// Message is the first to match: the body's `error`/`message`/`detail`
-/// field, a canned sentence, the trimmed body (200 chars max), or `HTTP <n>`.
+/// field, a canned sentence, the body's `error_type` code, the trimmed body
+/// (200 chars max), or `HTTP <n>`.
 TypeSafeApiException mapErrorResponse({
   required int statusCode,
   required String body,
@@ -21,6 +22,7 @@ TypeSafeApiException mapErrorResponse({
   final message =
       _extractMessage(errorJson) ??
       _defaultMessage(statusCode) ??
+      _extractErrorType(errorJson) ??
       _plainTextMessage(body) ??
       'HTTP $statusCode';
   final requestId = headers[requestIdHeader];
@@ -125,6 +127,22 @@ String? _extractMessage(Map<String, Object?>? json) {
   return _messageOf(json['error']) ??
       _messageOf(json['message']) ??
       _messageOf(json['detail']);
+}
+
+/// The `error_type` code of a body that carries no message, such as
+/// `{"detail":{"error_type":"max_tokens_exceeded"}}`. Read from the same
+/// fields as the message, then from the top level. Not in the official
+/// SDKs, which fall back to `HTTP <n>` here.
+String? _extractErrorType(Map<String, Object?>? json) {
+  if (json == null) {
+    return null;
+  }
+  for (final value in [json['error'], json['message'], json['detail'], json]) {
+    if (value case {'error_type': final String type} when type.isNotEmpty) {
+      return type;
+    }
+  }
+  return null;
 }
 
 /// A validation-error list with no recognised items yields `''`, not

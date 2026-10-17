@@ -24,6 +24,7 @@ sealed class Answer {
       JudgementType.noul => NoulAnswer.fromJson(json),
       JudgementType.choice => ChoiceAnswer.fromJson(json),
       JudgementType.score => ScoreAnswer.fromJson(json),
+      JudgementType.box => BoxAnswer.fromJson(json),
       null => throw ResponseValidationException(
         'Unknown answer type "$wire"',
         fieldPath: 'type',
@@ -40,6 +41,7 @@ sealed class Answer {
     NoulAnswer() => JudgementType.noul,
     ChoiceAnswer() => JudgementType.choice,
     ScoreAnswer() => JudgementType.score,
+    BoxAnswer() => JudgementType.box,
   };
 
   /// Encodes this answer in the API's JSON shape. The `type` entry is written
@@ -347,4 +349,87 @@ final class ScoreAnswer extends Answer {
     }
     return true;
   }
+}
+
+/// Answer to a `Box` question: the edges of a box around what its
+/// instructions describe, each a fraction of the image's size measured from
+/// the top-left corner. Multiply by the image's width or height in pixels to
+/// draw or crop it.
+///
+/// Experimental, like the `Box` question. The edges are passed through
+/// exactly as returned by the API, not clamped or reordered.
+@experimental
+@immutable
+final class BoxAnswer extends Answer {
+  const BoxAnswer({
+    required this.top,
+    required this.bottom,
+    required this.left,
+    required this.right,
+    required this.confidence,
+  });
+
+  factory BoxAnswer.fromJson(Map<String, Object?> json) {
+    final box = readObject(json, 'box');
+    try {
+      return BoxAnswer(
+        top: readDouble(box, 'top'),
+        bottom: readDouble(box, 'bottom'),
+        left: readDouble(box, 'left'),
+        right: readDouble(box, 'right'),
+        confidence: readDouble(json, 'confidence'),
+      );
+    } on ResponseValidationException catch (e) {
+      // Only the edges live under `box`; confidence sits beside it.
+      if (e.fieldPath == 'confidence') {
+        rethrow;
+      }
+      throw nestUnder(e, 'box');
+    }
+  }
+
+  /// Top edge, as a fraction of the image's height.
+  final double top;
+
+  /// Bottom edge, as a fraction of the image's height.
+  final double bottom;
+
+  /// Left edge, as a fraction of the image's width.
+  final double left;
+
+  /// Right edge, as a fraction of the image's width.
+  final double right;
+
+  /// How sure the model is of the box, in `[0, 1]`. There is no recommended
+  /// threshold yet; tune one on your own images.
+  final double confidence;
+
+  /// The box's width, as a fraction of the image's width.
+  double get width => right - left;
+
+  /// The box's height, as a fraction of the image's height.
+  double get height => bottom - top;
+
+  @override
+  Map<String, Object?> get _fields => {
+    'box': {'top': top, 'bottom': bottom, 'left': left, 'right': right},
+    'confidence': confidence,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is BoxAnswer &&
+      other.top == top &&
+      other.bottom == bottom &&
+      other.left == left &&
+      other.right == right &&
+      other.confidence == confidence;
+
+  @override
+  int get hashCode => Object.hash(top, bottom, left, right, confidence);
+
+  @override
+  String toString() =>
+      'BoxAnswer(top: $top, bottom: $bottom, left: $left, right: $right, '
+      'confidence: $confidence)';
 }

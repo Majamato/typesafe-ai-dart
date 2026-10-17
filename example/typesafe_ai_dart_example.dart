@@ -1,5 +1,7 @@
 // ignore_for_file: avoid_print, this is an example.
 // Run with: TYPESAFE_API_KEY=... dart run example/typesafe_ai_dart_example.dart
+import 'dart:io';
+
 import 'package:typesafe_ai_dart/typesafe_ai_dart.dart';
 
 enum Department { billing, technical, other }
@@ -67,10 +69,13 @@ Future<void> main() async {
     print('usage:      ${response.usage.inputTokens} input tokens');
   } on RateLimitException catch (e) {
     print('Rate limited, retry after ${e.retryAfter}');
+    exitCode = 1;
   } on TypeSafeApiException catch (e) {
     print('API error ${e.statusCode}: ${e.message} (request ${e.requestId})');
+    exitCode = 1;
   } on TypeSafeConnectionException catch (e) {
     print('Network problem: ${e.message}');
+    exitCode = 1;
   } finally {
     client.close();
   }

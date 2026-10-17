@@ -20,6 +20,12 @@ const sdkHeader = 'x-typesafe-sdk';
 /// Number of retries already spent, sent only from the second attempt on.
 const retryCountHeader = 'x-typesafe-retry-count';
 
+/// Turns on images and Box questions for one request, with value `true`.
+const dangerZoneImagesHeader = 'typesafe-danger-zone-images';
+
+/// Turns on long context for one request, with value `true`.
+const dangerZoneLongContextHeader = 'typesafe-danger-zone-long-context';
+
 /// Response header carrying the request id.
 const requestIdHeader = 'x-typesafe-request-id';
 

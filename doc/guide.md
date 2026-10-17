@@ -282,3 +282,93 @@ final client = fakeClient({
   'isAngry': {'type': 'noul', 'noul': 0.92},
 });
 ```
+
+## Experimental: images, Box and long context
+
+These come from Jev 1.14's "Danger Zone". TypeSafe doesn't call them ready
+for production, and their request format, answers and limits can change
+between releases. They ship only in `0.2.0` prereleases, under their own
+import:
+
+```dart
+import 'package:typesafe_ai_dart/experimental.dart';
+```
+
+Everything there is marked `@experimental`, so it can change in a release
+that isn't a breaking one. Dart 3.11 and later report each use as an
+`experimental_member_use` warning. Turn it off in `analysis_options.yaml`
+with `analyzer: errors: experimental_member_use: ignore`.
+
+### Turning features on
+
+Each feature is off until a request sends its `TypeSafe-Danger-Zone-*`
+header. `DangerZone` names them:
+
+| Value | Header | What it turns on |
+| --- | --- | --- |
+| `DangerZone.images` | `TypeSafe-Danger-Zone-Images: true` | Images in a request, and `Box` questions |
+| `DangerZone.longContext` | `TypeSafe-Danger-Zone-Long-Context: true` | 262k tokens per request and per question, instead of the defaults |
+
+Turn one on for every call with `TypeSafeClient(dangerZone: {...})`, or for
+one call with `RequestOptions(dangerZone: {...})`. Sending the header in
+`headers` works too. A request with an `Image` or a `Box` but without
+images turned on fails with an `ArgumentError` before it is sent, instead
+of a 400 from the API. Long context is slower and less accurate than the
+default limits, so turn it on only for the calls that need it.
+
+### Images
+
+`Image(bytes)` takes the bytes of a PNG or JPEG file, and
+`Image.fromFile(path)` reads one. Put an image anywhere a request takes
+text:
+
+- in `state`, where every question sees it. Refer to it by path, as in
+  `` `photo` `` or `` `frames[2].frame` ``;
+- in a question's `instructions`, sent only with that question:
+  `` TextWithImages(['Is the person in `door` the same as ', badge, '?']) ``;
+- in criteria, as an example for a `Choice` option, a `Score` level or a
+  `Noul` outcome: `criteria: {'thumbs_up': thumb, 'none': 'No hand.'}`.
+
+Each image stands in the request as its `reference`, a random string that
+can't occur in your text by accident. You can pick one with
+`Image(bytes, reference: ...)`, but it is matched as plain text, so it must
+not appear anywhere else in the request. Interpolating an image into a
+string (`'$image'`) doesn't work; use `TextWithImages`.
+
+A request with images goes out as `multipart/form-data`, as TypeSafe
+recommends. The JSON body is the first part, named `request`, with an
+`assets` map pointing each reference at a file part. Then comes each image,
+sent once even when it appears in several places. Each extra place still
+counts against the request limits, so an image several questions need
+belongs in `state`. `SystemOneRequest.contentType` gives the content type
+of `encode()`'s bytes.
+
+The client checks only that an image is a PNG or JPEG file. The API
+enforces the limits, which TypeSafe may change: currently 16 MiB per file,
+280 to 1568 pixels per side, and 32 MiB for the whole request. Resize
+images and rotate them upright before sending, because the API drops EXIF
+data, orientation included. See
+[TypeSafe's image guide](https://docs.typesafe.ai/images).
+
+An image's bytes are not copied, so don't change them after building the
+`Image`. Don't put an image in `extra`: the API looks for images only in
+the state, instructions and criteria, so the request rejects one there.
+Don't combine images with an `assets` entry in `extra` either. Without
+images, an `assets` entry in `extra` is sent as before, as when you build
+assets by hand.
+
+### Box
+
+`Box(id: ..., instructions: ...)` finds one thing in an image. Its
+`BoxAnswer` has `top`, `bottom`, `left` and `right`, each a fraction of the
+image's size from its top-left corner, plus `width`, `height` and
+`confidence`. Multiply by the image's size in pixels to draw or crop it.
+
+- Box questions need Jev 1.14: `model: 'jev-preview'` or `'jev-1.14.0'`.
+- A Box always answers with a box, even when the target isn't there. Ask a
+  `Noul` such as "Is there a mug in `photo`?" in the same request, and
+  ignore the box when it is low.
+- There is no recommended `confidence` threshold yet. Tune one on your own
+  images.
+
+`example/experimental_images.dart` runs a Box and a Noul on a photo.

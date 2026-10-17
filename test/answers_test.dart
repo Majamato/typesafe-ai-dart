@@ -232,6 +232,9 @@ void main() {
       JudgementType.score:
           '{"type":"score","score":0,"legend":{"0":"x"},'
           '"probabilities":{"0":1},"confidence":1}',
+      JudgementType.box:
+          '{"type":"box","box":{"top":0.1,"bottom":0.9,"left":0.2,'
+          '"right":0.8},"confidence":0.5}',
     };
     for (final value in JudgementType.values) {
       final body = bodies[value];

@@ -84,6 +84,27 @@ void main() {
     });
   });
 
+  test('experimental.dart exports exactly the experimental symbols', () {
+    final source = File('lib/experimental.dart').readAsStringSync();
+    final shown = {
+      for (final match in RegExp(r'show\s+([^;]+);').allMatches(source))
+        ...match[1]!.split(',').map((name) => name.trim()),
+    };
+    expect(RegExp('^export ', multiLine: true).allMatches(source).length, 4);
+    expect(shown, {
+      'BoxAnswer', 'Image', 'ImageFormat', 'TextWithImages', //
+      'DangerZone', 'Box',
+    });
+    final stable = File('lib/typesafe_ai_dart.dart').readAsStringSync();
+    for (final name in shown) {
+      expect(
+        stable,
+        isNot(contains(RegExp('\\b$name\\b'))),
+        reason: '$name must stay out of the stable library',
+      );
+    }
+  });
+
   test("the README's error switch covers every exception", () {
     const api = (
       statusCode: 400,

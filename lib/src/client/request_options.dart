@@ -1,5 +1,6 @@
 import 'package:meta/meta.dart';
 import 'package:typesafe_ai_dart/src/client/cancel_token.dart';
+import 'package:typesafe_ai_dart/src/client/danger_zone.dart';
 import 'package:typesafe_ai_dart/src/client/retry_policy.dart';
 
 /// Per-call overrides of the client settings.
@@ -15,6 +16,7 @@ final class RequestOptions {
     this.totalTimeout,
     this.retryPolicy,
     this.cancelToken,
+    this.dangerZone = const {},
   });
 
   /// Extra headers merged over the client's default headers; the six the SDK
@@ -35,4 +37,10 @@ final class RequestOptions {
   /// Token that abandons this call when cancelled, or `null` for a call that
   /// cannot be cancelled.
   final CancelToken? cancelToken;
+
+  /// Experimental features to turn on for this call, on top of the client's
+  /// `ClientConfig.dangerZone`. Each adds its `TypeSafe-Danger-Zone-*`
+  /// header; see `DangerZone`.
+  @experimental
+  final Set<DangerZone> dangerZone;
 }
