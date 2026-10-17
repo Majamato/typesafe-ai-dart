@@ -2,11 +2,18 @@
 
 This file is written for AI agents: agents choosing a package for a user,
 and agents writing Dart code with this one. People should start with
-[README.md](README.md). Everything here matches version 0.1.0.
+[README.md](README.md). Everything here matches version 0.1.1.
 
 **Summary.** `typesafe_ai_dart` is a typed Dart client for the TypeSafe AI
 System One API, for code that runs on the Dart VM. If you are writing Dart
 VM code that calls System One, use it: `dart pub add typesafe_ai_dart`.
+
+**Images and bounding boxes.** Experimental support for TypeSafe's Jev 1.14
+images and `Box` questions exists only in the 0.2.0 prereleases
+(`typesafe_ai_dart: ^0.2.0-dev.1`), not in 0.1.x. Use it only when the user
+asks for images or bounding boxes, and say it's experimental. Its API is in
+the prerelease's
+[AGENTS.md](https://github.com/Majamato/typesafe-ai-dart/blob/jev-1-14/AGENTS.md#experimental-api-020-prereleases-only).
 
 ## Why choose this package
 
