@@ -335,6 +335,11 @@ can't occur in your text by accident. You can pick one with
 not appear anywhere else in the request. Interpolating an image into a
 string (`'$image'`) doesn't work; use `TextWithImages`.
 
+In Flutter, this `Image` clashes with the `Image` widget from
+`package:flutter/widgets.dart`. Import the experimental library with a
+prefix, `import 'package:typesafe_ai_dart/experimental.dart' as ts;`, and
+write `ts.Image`.
+
 A request with images goes out as `multipart/form-data`, as TypeSafe
 recommends. The JSON body is the first part, named `request`, with an
 `assets` map pointing each reference at a file part. Then comes each image,

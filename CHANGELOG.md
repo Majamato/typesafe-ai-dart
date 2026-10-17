@@ -3,6 +3,10 @@
 A prerelease with TypeSafe's experimental Jev 1.14 "Danger Zone" features.
 `^0.1.0` never resolves to it; depend on `^0.2.0-dev.1` to try it.
 
+- **Breaking:** `JudgementType` gains `box`, and the sealed `Answer` and
+  `Question` gain `BoxAnswer` and `Box`. An exhaustive `switch` over any of
+  them needs a new case. A request without images still sends the same
+  bytes and headers as 0.1.0.
 - **Experimental**, in `package:typesafe_ai_dart/experimental.dart`:
   - `Image`: PNG or JPEG images anywhere a request takes text (`state`,
     `instructions`, criteria). A request with images is sent as
@@ -22,10 +26,6 @@ A prerelease with TypeSafe's experimental Jev 1.14 "Danger Zone" features.
   context length, which images make easier to reach, now fails with a
   `BadRequestException` saying `max_tokens_exceeded`. Errors that already
   had a message keep it.
-- **Breaking:** `JudgementType` gains `box`, and the sealed `Answer` and
-  `Question` gain `BoxAnswer` and `Box`. An exhaustive `switch` over any of
-  them needs a new case. Nothing else changes: a request without images
-  sends the same bytes and headers as 0.1.0.
 
 ## 0.1.0
 

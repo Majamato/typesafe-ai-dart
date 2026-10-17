@@ -377,6 +377,8 @@ final client = fakeClient({
   merge `main` into `jev-1-14`. Never publish a 0.1.x prerelease.
 - Experimental API is exported only from `lib/experimental.dart` and marked
   `@experimental`. Keep it out of `lib/typesafe_ai_dart.dart`.
+- main's README has a short "Experimental" teaser under the same heading.
+  When merging main into jev-1-14, keep jev-1-14's full section.
 - Human-facing docs are split three ways. README.md stays short. How-to
   material goes in doc/guide.md, and the reasons behind decisions go in
   doc/design.md.

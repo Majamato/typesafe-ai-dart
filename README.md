@@ -6,6 +6,9 @@ One API, built for servers.
 Unofficial and not affiliated with TypeSafe. AI agents: start with
 [AGENTS.md](AGENTS.md).
 
+Experimental image and Box support (Jev 1.14) is in the 0.2.0 prereleases.
+See [Experimental](#experimental-images-and-box-jev-114).
+
 ## How it's built
 
 Two rules shaped every decision. Keep answers typed as far as Dart allows,
@@ -183,26 +186,21 @@ Future<void> main() async {
 
 - Put an `Image` anywhere a request takes text: in `state`, in
   `instructions`, or in criteria. Use `TextWithImages` to put one inside a
-  sentence. A request with images goes out as `multipart/form-data`, with
-  each image sent once.
+  sentence.
 - A request with an image or a `Box` needs `DangerZone.images`, on the
   client or in `RequestOptions(dangerZone: ...)`. Without it, the call fails
   with an `ArgumentError` before anything is sent.
 - `DangerZone.longContext` raises the context limit to 262k tokens. It is
   slower and less accurate, so turn it on only per call.
-- Everything in `experimental.dart` is marked `@experimental`. Dart 3.11
-  and later warn on each use (`experimental_member_use`). To turn the warning
-  off, add this to your `analysis_options.yaml`:
-
-  ```yaml
-  analyzer:
-    errors:
-      experimental_member_use: ignore
-  ```
+- Everything in `experimental.dart` is marked `@experimental`, so Dart 3.11
+  and later warn on each use (`experimental_member_use`). The guide shows
+  how to turn that off.
+- In Flutter, `Image` clashes with the `Image` widget. Import the library
+  with a prefix: `import 'package:typesafe_ai_dart/experimental.dart' as ts;`.
 
 Calls without these features behave exactly as in 0.1.0. The
-[guide](doc/guide.md#experimental-images-box-and-long-context) has the
-details.
+[guide](https://github.com/Majamato/typesafe-ai-dart/blob/jev-1-14/doc/guide.md#experimental-images-box-and-long-context)
+has the details.
 
 ## Learn more
 
