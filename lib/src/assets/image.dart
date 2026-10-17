@@ -14,8 +14,7 @@ import 'package:typesafe_ai_dart/src/json/json_encodable.dart';
 @experimental
 enum ImageFormat {
   png('image/png'),
-  jpeg('image/jpeg')
-  ;
+  jpeg('image/jpeg');
 
   const ImageFormat(this.mimeType);
 
