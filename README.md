@@ -6,6 +6,9 @@ One API, built for servers.
 Unofficial and not affiliated with TypeSafe. AI agents: start with
 [AGENTS.md](AGENTS.md).
 
+Experimental image and Box support (Jev 1.14) is in the 0.2.0 prereleases.
+See [Experimental](#experimental-images-and-box-jev-114).
+
 ## How it's built
 
 Two rules shaped every decision. Keep answers typed as far as Dart allows,
@@ -136,6 +139,25 @@ try {
 
 A bad argument is an `ArgumentError`, which is a bug to fix, not a failure
 to retry.
+
+## Experimental: images and Box (Jev 1.14)
+
+TypeSafe's Jev 1.14 adds "Danger Zone" features that it doesn't yet call
+ready for production: images in a request, `Box` questions that find
+something in an image, and a 262k-token context. This package supports them
+in a separate prerelease line, so `^0.1.0` never picks them up. To try them:
+
+```sh
+dart pub add 'typesafe_ai_dart:^0.2.0-dev.1'
+```
+
+They live behind their own import,
+`package:typesafe_ai_dart/experimental.dart`, and stay off until you turn
+them on. The
+[prerelease README](https://github.com/Majamato/typesafe-ai-dart/tree/jev-1-14#experimental-images-and-box-jev-114)
+has an example, and the
+[guide](https://github.com/Majamato/typesafe-ai-dart/blob/jev-1-14/doc/guide.md#experimental-images-box-and-long-context)
+has the details.
 
 ## Learn more
 
