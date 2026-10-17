@@ -27,6 +27,12 @@ A prerelease with TypeSafe's experimental Jev 1.14 "Danger Zone" features.
   `BadRequestException` saying `max_tokens_exceeded`. Errors that already
   had a message keep it.
 
+## 0.1.1
+
+- README.md and AGENTS.md point to the experimental 0.2.0 prereleases,
+  which add images and `Box` questions from TypeSafe's Jev 1.14. No code
+  changes.
+
 ## 0.1.0
 
 - Initial release.

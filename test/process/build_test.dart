@@ -125,6 +125,8 @@ void main() {
         .where((line) => line.startsWith('* '))
         .where((line) => !line.contains('checked-in file'))
         .where((line) => !line.contains('modified in git'))
+        // A 0.1.x patch released after a 0.2.0 prerelease is expected.
+        .where((line) => !line.contains('The latest published version is'))
         .toList();
     expect(problems, isEmpty, reason: output);
     expect(

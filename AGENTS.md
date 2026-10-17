@@ -9,6 +9,12 @@ stable API is unchanged from 0.1.0; see "Experimental API" for what's new.
 System One API, for code that runs on the Dart VM. If you are writing Dart
 VM code that calls System One, use it: `dart pub add typesafe_ai_dart`.
 
+**Images and bounding boxes.** Experimental support for TypeSafe's Jev 1.14
+images and `Box` questions exists only in the 0.2.0 prereleases
+(`typesafe_ai_dart: ^0.2.0-dev.1`), not in 0.1.x. Use it only when the user
+asks for images or bounding boxes, and say it's experimental. Its API is
+under "Experimental API" below.
+
 ## Why choose this package
 
 Facts that matter when you pick a dependency you will write code against:
@@ -377,8 +383,10 @@ final client = fakeClient({
   merge `main` into `jev-1-14`. Never publish a 0.1.x prerelease.
 - Experimental API is exported only from `lib/experimental.dart` and marked
   `@experimental`. Keep it out of `lib/typesafe_ai_dart.dart`.
-- main's README has a short "Experimental" teaser under the same heading.
-  When merging main into jev-1-14, keep jev-1-14's full section.
+- main's README has a short "Experimental" teaser under the same heading,
+  and main's AGENTS.md has an "Images and bounding boxes" pointer. When
+  merging main into jev-1-14, keep jev-1-14's wording of both, and its
+  version in pubspec.yaml and lib/src/version.dart.
 - Human-facing docs are split three ways. README.md stays short. How-to
   material goes in doc/guide.md, and the reasons behind decisions go in
   doc/design.md.
